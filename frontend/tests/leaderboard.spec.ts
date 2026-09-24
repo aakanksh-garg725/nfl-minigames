@@ -55,6 +55,7 @@ test("current-week leaderboard opens read-only player lineups on desktop and mob
             display_name: "Rival Fan",
             rank: 1,
             score: 60,
+            projected_score: 72,
             weeks_played: 1,
             average: 60,
           },
@@ -68,10 +69,26 @@ test("current-week leaderboard opens read-only player lineups on desktop and mob
     exact: true,
   });
   await expect(link).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "PROJECTED PPR" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("row").filter({ hasText: "@rival_fan" }),
+  ).toContainText("72.0");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
+  await page.setViewportSize({ width: 1440, height: 1080 });
   await page.getByLabel("Week", { exact: true }).selectOption("2");
   await expect(page.locator(".leaderboard-lineup-link")).toHaveCount(0);
   await page.getByLabel("Week", { exact: true }).selectOption("3");
   await page.getByRole("tab", { name: "Season", exact: true }).click();
+  await expect(
+    page.getByRole("columnheader", { name: "PROJECTED PPR" }),
+  ).toHaveCount(0);
   await expect(page.locator(".leaderboard-lineup-link")).toHaveCount(0);
   await page.getByRole("tab", { name: "Weekly", exact: true }).click();
   await link.click();
@@ -83,6 +100,9 @@ test("current-week leaderboard opens read-only player lineups on desktop and mob
     page.getByRole("region", { name: "Player lineup summary" }),
   ).toContainText("60.0");
   await expect(page.locator(".roster-card.filled")).toHaveCount(6);
+  await expect(
+    page.getByLabel("Total projected points", { exact: true }),
+  ).toHaveText("72.0");
   await expect(page.locator(".lineup-cards").getByRole("link")).toHaveCount(0);
   await expect(page.locator(".lineup-cards").getByRole("button")).toHaveCount(
     0,

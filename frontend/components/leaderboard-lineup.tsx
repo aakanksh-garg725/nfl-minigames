@@ -58,6 +58,17 @@ function PlayerLineup({ season, week, userId }: Props) {
                 <strong>{points(data.score)}</strong>
               </div>
               <div>
+                <small>TOTAL PROJECTED PPR</small>
+                <strong aria-label="Total projected points">
+                  {points(
+                    data.slots.reduce(
+                      (total, slot) => total + (slot.player?.projection ?? 0),
+                      0,
+                    ),
+                  )}
+                </strong>
+              </div>
+              <div>
                 <small>WEEK STATUS</small>
                 <span
                   className={`status-pill ${data.status === "LIVE" ? "open" : ""}`}

@@ -120,6 +120,16 @@ def weekly_leaderboard(db, season, week):
                 "username": profile.username,
                 "display_name": profile.display_name,
                 "score": float(entry.actual_score),
+                "projected_score": float(
+                    sum(
+                        (
+                            slot.projection_when_acquired or Decimal(0)
+                            for slot in entry_slots(db, entry)
+                            if slot.player_id
+                        ),
+                        Decimal(0),
+                    )
+                ),
                 "user_id": entry.user_id,
                 "weeks_played": 1,
             }

@@ -218,7 +218,7 @@ test("head-to-head invitations, record and weekly history UI", async ({
                     name,
                     position: "RB",
                     team: "BAL",
-                    projection: 15.5,
+                    projection: username === "local_player" ? 15.5 : 20.3,
                     opponent: "KC",
                     is_home: false,
                   },
@@ -322,6 +322,12 @@ test("head-to-head invitations, record and weekly history UI", async ({
     page.getByLabel("Opponent total points", { exact: true }),
   ).toHaveText("95.0");
   const pair = page.getByLabel("RB1 matchup", { exact: true });
+  await expect(
+    page.getByLabel("Your total projected points", { exact: true }),
+  ).toContainText("15.5");
+  await expect(
+    page.getByLabel("Opponent total projected points", { exact: true }),
+  ).toContainText("20.3");
   await expect(pair.locator(".matchup-player").first()).toContainText(
     "Your running back",
   );
@@ -348,6 +354,12 @@ test("head-to-head invitations, record and weekly history UI", async ({
   await page.getByLabel("Matchup week", { exact: true }).selectOption("5");
   await expect(page).toHaveURL(/\/preview\/5$/);
   await expect(page.getByText("Empty slot", { exact: true })).toHaveCount(12);
+  await expect(
+    page.getByLabel("Your total projected points", { exact: true }),
+  ).toContainText("0.0");
+  await expect(
+    page.getByLabel("Opponent total projected points", { exact: true }),
+  ).toContainText("0.0");
   await expect(
     page.getByLabel("Your total points", { exact: true }),
   ).toHaveText("0.0");

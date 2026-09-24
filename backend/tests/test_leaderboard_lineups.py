@@ -130,3 +130,25 @@ def test_lineup_view_requires_signin(client, shared):
 
     app.dependency_overrides[current_user] = unauthenticated
     assert client.get(lineup_url(shared[0])).status_code == 401
+
+
+def test_weekly_leaderboard_totals_acquired_projections_separately(client, db, shared):
+    week, entry = shared
+    url = f"/api/v1/leaderboards/weekly?season={week.season}&week={week.week}"
+    row = client.get(url).json()["rows"][0]
+    assert row["projected_score"] == 90
+    assert row["score"] == 9
+    slots = list(db.scalars(select(LineupSlot).where(LineupSlot.entry_id == entry.id)))
+    slots[0].projection_when_acquired = Decimal("15.125")
+    slots[1].projection_when_acquired = None
+    db.commit()
+    updated = client.get(url).json()["rows"][0]
+    assert updated["projected_score"] == 75.125
+    assert updated["score"] == row["score"]
+    assert updated["rank"] == row["rank"]
+    # Historical weeks keep their own acquired projections, not current ESPN values.
+    entry.status = "FINAL"
+    db.commit()
+    assert client.get(url).json()["rows"][0]["projected_score"] == 75.125
+    season = scoring.season_leaderboard(db, week.season)
+    assert "projected_score" not in season["rows"][0]

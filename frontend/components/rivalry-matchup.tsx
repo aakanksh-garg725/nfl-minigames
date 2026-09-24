@@ -42,6 +42,18 @@ function TeamHeading({ team, yours }: { team: MatchupTeam; yours: boolean }) {
         {points(team.score)}
       </strong>
       <span className="matchup-score-label">TOTAL POINTS</span>
+      <span
+        className="matchup-projected-total"
+        aria-label={`${yours ? "Your" : "Opponent"} total projected points`}
+      >
+        {points(
+          team.slots.reduce(
+            (total, slot) => total + (slot.player?.projection ?? 0),
+            0,
+          ),
+        )}
+        <small>PROJECTED PPR</small>
+      </span>
       <TeamLogo team={team.favorite_team || "NFL"} size={44} />
       <h2>@{team.username}</h2>
       <small>

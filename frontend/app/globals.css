@@ -2327,6 +2327,7 @@ form input::placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
+  align-self: start;
   text-align: center;
   gap: 8px;
   padding: 28px 16px;
@@ -2353,6 +2354,13 @@ form input::placeholder {
 }
 .matchup-score-label {
   letter-spacing: 1px;
+}
+.matchup-projected-total {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
   margin-bottom: 12px;
 }
 .matchup-versus,

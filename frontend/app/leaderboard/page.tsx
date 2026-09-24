@@ -133,6 +133,9 @@ export default function LeaderboardPage() {
                   <tr>
                     <th>RANK</th>
                     <th>PLAYER</th>
+                    {tab === "weekly" && (
+                      <th className="align-right">PROJECTED PPR</th>
+                    )}
                     {tab === "season" && (
                       <>
                         <th>WEEKS</th>
@@ -192,6 +195,11 @@ export default function LeaderboardPage() {
                           <td>{points(row.average)}</td>
                         </>
                       )}
+                      {tab === "weekly" && (
+                        <td className="align-right">
+                          {points(row.projected_score)}
+                        </td>
+                      )}
                       <td className="align-right table-score">
                         {points(row.score)}
                       </td>
@@ -206,7 +214,7 @@ export default function LeaderboardPage() {
                   ? "Select a player to view their current-week lineup."
                   : "Equal points share the same rank."}
               </span>
-              <span>Full PPR · Actual results only</span>
+              <span>Full PPR · Ranked by actual points</span>
             </div>
           </div>
         ))}
