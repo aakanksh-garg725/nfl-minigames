@@ -66,6 +66,11 @@ function HeadToHead() {
     },
   });
   const data = query.data;
+  const visibleRivalries =
+    data?.rivalries.filter(
+      (rivalry) =>
+        rivalry.status === "PENDING" || rivalry.status === "ACCEPTED",
+    ) ?? [];
   return (
     <>
       <PageTitle
@@ -168,14 +173,14 @@ function HeadToHead() {
               results are finalized. Live scores are provisional and may change
               after stat corrections.
             </p>
-            {!data.rivalries.length && (
+            {!visibleRivalries.length && (
               <div className="info-notice">
-                No rivalries for this season yet. Invite a friend using their
-                profile username.
+                No active rivalries or pending invitations for this season.
+                Invite a friend using their profile username.
               </div>
             )}
             <div className="rivalry-list">
-              {data.rivalries.map((rivalry) => (
+              {visibleRivalries.map((rivalry) => (
                 <section className="panel rivalry-card" key={rivalry.id}>
                   <header>
                     <div className="rivalry-opponent">
@@ -244,7 +249,7 @@ function HeadToHead() {
                       >
                         View matchup
                       </Link>
-                      <details open>
+                      <details>
                         <summary>Week-by-week matchup history</summary>
                         <div className="matchup-table-wrap">
                           <table className="matchup-table">
@@ -289,13 +294,6 @@ function HeadToHead() {
                         </div>
                       </details>
                     </>
-                  )}
-                  {(rivalry.status === "DECLINED" ||
-                    rivalry.status === "CANCELED") && (
-                    <p>
-                      This invitation is closed. A new invitation can be sent by
-                      username.
-                    </p>
                   )}
                 </section>
               ))}

@@ -280,6 +280,12 @@ test("head-to-head invitations, record and weekly history UI", async ({
   await page.goto("/head-to-head");
   await expect(page.getByRole("heading", { name: "@rival_fan" })).toBeVisible();
   await page.getByRole("button", { name: "Accept invitation" }).click();
+  await expect(page.locator(".rivalry-card details")).not.toHaveAttribute(
+    "open",
+    "",
+  );
+  await expect(page.locator(".matchup-table")).toBeHidden();
+  await page.getByText("Week-by-week matchup history", { exact: true }).click();
   await expect(page.getByText("Weeks 3–18 · 2026 season")).toBeVisible();
   await expect(
     page.getByRole("cell", { name: "WIN", exact: true }),
@@ -349,4 +355,85 @@ test("head-to-head invitations, record and weekly history UI", async ({
   await expect(page.getByText("UPCOMING", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Back to rivalries" }).click();
   await expect(page).toHaveURL(/\/head-to-head$/);
+  await expect(page.locator(".matchup-table")).toBeHidden();
+});
+
+test("closed invitations stay hidden including after cancel and decline", async ({
+  page,
+}) => {
+  const invites = [
+    {
+      id: "old-cancel",
+      status: "CANCELED",
+      direction: "SENT",
+      username: "old_cancel",
+    },
+    {
+      id: "old-decline",
+      status: "DECLINED",
+      direction: "RECEIVED",
+      username: "old_decline",
+    },
+    { id: "sent", status: "PENDING", direction: "SENT", username: "sent_fan" },
+    {
+      id: "received",
+      status: "PENDING",
+      direction: "RECEIVED",
+      username: "received_fan",
+    },
+  ];
+  await page.route("**/api/v1/rivalries**", async (route) => {
+    if (route.request().method() === "POST") {
+      const id = new URL(route.request().url()).pathname.split("/").at(-2);
+      const invite = invites.find((item) => item.id === id)!;
+      const { decision } = route.request().postDataJSON();
+      expect(decision).toBe(id === "sent" ? "CANCEL" : "DECLINE");
+      invite.status = decision === "CANCEL" ? "CANCELED" : "DECLINED";
+      return route.fulfill({ json: {} });
+    }
+    return route.fulfill({
+      json: {
+        season: 2026,
+        total_points: 0,
+        weeks_scored: 0,
+        record: { wins: 0, losses: 0, ties: 0 },
+        rivalries: invites.map((invite) => ({
+          ...invite,
+          season: 2026,
+          start_week: null,
+          opponent: { username: invite.username, favorite_team: "BAL" },
+          record: { wins: 0, losses: 0, ties: 0 },
+          opponent_record: { wins: 0, losses: 0, ties: 0 },
+          your_total: 0,
+          opponent_total: 0,
+          history: [],
+        })),
+      },
+    });
+  });
+  await page.goto("/head-to-head");
+  await expect(page.locator(".rivalry-card")).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "@old_cancel" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("heading", { name: "@old_decline" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Cancel invitation" }).click();
+  await expect(page.getByRole("heading", { name: "@sent_fan" })).toHaveCount(0);
+  await expect(page.locator(".rivalry-card")).toHaveCount(1);
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  await expect(page.locator(".rivalry-card")).toHaveCount(0);
+  await expect(
+    page.getByText("No active rivalries or pending invitations", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText("No active rivalries or pending invitations", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".rivalry-card")).toHaveCount(0);
 });
