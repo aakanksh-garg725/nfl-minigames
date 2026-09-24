@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.services.game import begin_write, current_week
 from app.services.rules import RuleError
-from app.services.scoring import lineup
+from app.services.scoring import lineup, lineup_points
 
 
 def matchup_start_week(db, now):
@@ -139,9 +139,7 @@ def sync_matchups(db, season, week):
     scores, missing_final = {}, set()
     for entry in entries:
         slots = list(db.scalars(select(LineupSlot).where(LineupSlot.entry_id == entry.id)))
-        scores[entry.user_id] = sum(
-            (results[s.player_id].actual_ppr for s in slots if s.player_id in results), Decimal(0)
-        )
+        scores[entry.user_id] = lineup_points(db, entry, results)
         if any(
             s.player_id
             and (

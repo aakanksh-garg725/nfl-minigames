@@ -86,6 +86,7 @@ export type Leaderboard = {
     score: number;
     weeks_played: number;
     projected_score?: number;
+    has_lineup?: boolean;
     average?: number;
   }[];
 };

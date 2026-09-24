@@ -109,8 +109,8 @@ export default function LeaderboardPage() {
             action="Build your lineup"
           >
             {tab === "season"
-              ? "Season standings include finalized weeks. Check back after the first week is final."
-              : "Complete all six lineup slots before the deadline to join the weekly standings."}
+              ? "Users appear after completing at least one Deal or No Deal pick this season. Empty slots and weeks without a lineup score zero."
+              : "Users appear after completing at least one Deal or No Deal pick this week. Empty roster spots score zero."}
           </Empty>
         ) : (
           <div className="panel leaderboard-panel">
@@ -124,7 +124,7 @@ export default function LeaderboardPage() {
                 className={`status-pill ${query.data.status === "LIVE" ? "open" : ""}`}
               >
                 <span />
-                {tab === "season" ? "FINALIZED WEEKS" : query.data.status}
+                {tab === "season" ? "CUMULATIVE POINTS" : query.data.status}
               </span>
             </div>
             <div className="table-scroll">
@@ -143,7 +143,7 @@ export default function LeaderboardPage() {
                       </>
                     )}
                     <th className="align-right">
-                      {tab === "weekly" ? "ACTUAL PPR" : "TOTAL PPR"}
+                      {tab === "weekly" ? "ACTUAL PPR" : "SEASON TOTAL PPR"}
                     </th>
                   </tr>
                 </thead>
@@ -169,7 +169,7 @@ export default function LeaderboardPage() {
                               .toUpperCase()}
                           </span>
                           <div>
-                            {canViewLineups ? (
+                            {canViewLineups && row.has_lineup !== false ? (
                               <Link
                                 className="leaderboard-lineup-link"
                                 href={`/leaderboard/${year}/${selectedWeek}/${encodeURIComponent(row.user_id)}`}
@@ -214,7 +214,11 @@ export default function LeaderboardPage() {
                   ? "Select a player to view their current-week lineup."
                   : "Equal points share the same rank."}
               </span>
-              <span>Full PPR · Ranked by actual points</span>
+              <span>
+                {tab === "season"
+                  ? "Full PPR · Total points across rostered players"
+                  : "Full PPR · Ranked by actual points"}
+              </span>
             </div>
           </div>
         ))}

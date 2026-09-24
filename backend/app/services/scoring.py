@@ -41,6 +41,30 @@ def eligible_entries(db, season, week=None):
     return valid
 
 
+def lineup_points(db, entry, results=None):
+    """Score a lineup like head-to-head matchups: an absent player scores zero."""
+    if not entry:
+        return Decimal(0)
+    if results is None:
+        results = {
+            result.player_id: result
+            for result in db.scalars(
+                select(PlayerResult).where(
+                    PlayerResult.season == entry.season,
+                    PlayerResult.week == entry.week,
+                )
+            )
+        }
+    return sum(
+        (
+            results[slot.player_id].actual_ppr
+            for slot in entry_slots(db, entry)
+            if slot.player_id in results
+        ),
+        Decimal(0),
+    )
+
+
 def recompute(db, season, week):
     results = {
         r.player_id: r.actual_ppr
@@ -108,33 +132,59 @@ def finalize(db, season, week, final=True):
 
 def weekly_leaderboard(db, season, week):
     nfl_week = db.scalar(select(NFLWeek).where(NFLWeek.season == season, NFLWeek.week == week))
-    entries = sorted(eligible_entries(db, season, week), key=lambda e: (-e.actual_score, e.user_id))
+    entries = db.scalars(
+        select(WeeklyEntry).where(
+            WeeklyEntry.season == season,
+            WeeklyEntry.week == week,
+            WeeklyEntry.game_type == "DEAL",
+        )
+    ).all()
+    week_entries = {entry.user_id: entry for entry in entries}
+    completed_this_week = {entry.user_id for entry in eligible_entries(db, season, week)}
+    results = {
+        result.player_id: result
+        for result in db.scalars(
+            select(PlayerResult).where(PlayerResult.season == season, PlayerResult.week == week)
+        )
+    }
+    # One completed Deal or No Deal pick (a filled slot) qualifies the user.
+    # The player's NFL game need not have started; empty slots score zero.
+    weekly_scores = {
+        user_id: lineup_points(db, entry, results)
+        for user_id, entry in week_entries.items()
+        if any(slot.player_id for slot in entry_slots(db, entry))
+    }
+    ranked = sorted(weekly_scores.items(), key=lambda item: (-item[1], item[0]))
     rows, rank, previous = [], 0, None
-    for index, entry in enumerate(entries, 1):
-        if entry.actual_score != previous:
+    for index, (user_id, score) in enumerate(ranked, 1):
+        if score != previous:
             rank = index
-        profile = db.get(Profile, entry.user_id)
+        profile = db.get(Profile, user_id)
+        entry = week_entries.get(user_id)
         rows.append(
             {
                 "rank": rank,
                 "username": profile.username,
                 "display_name": profile.display_name,
-                "score": float(entry.actual_score),
+                "score": float(score),
                 "projected_score": float(
                     sum(
                         (
                             slot.projection_when_acquired or Decimal(0)
                             for slot in entry_slots(db, entry)
                             if slot.player_id
-                        ),
+                        )
+                        if entry
+                        else (),
                         Decimal(0),
                     )
                 ),
-                "user_id": entry.user_id,
+                "user_id": user_id,
+                "has_lineup": user_id in completed_this_week,
                 "weeks_played": 1,
             }
         )
-        previous = entry.actual_score
+        previous = score
     return {
         "season": season,
         "week": week,
@@ -144,13 +194,32 @@ def weekly_leaderboard(db, season, week):
 
 
 def season_leaderboard(db, season):
+    entries = db.scalars(
+        select(WeeklyEntry).where(
+            WeeklyEntry.season == season,
+            WeeklyEntry.game_type == "DEAL",
+        )
+    ).all()
+    results = {
+        (result.week, result.player_id): result
+        for result in db.scalars(select(PlayerResult).where(PlayerResult.season == season))
+    }
     users = {}
-    for entry in eligible_entries(db, season):
-        if entry.status != "FINAL":
+    for entry in entries:
+        slots = entry_slots(db, entry)
+        if not any(slot.player_id for slot in slots):
             continue
-        record = users.setdefault(entry.user_id, {"total": Decimal(0), "weeks": 0})
-        record["total"] += entry.actual_score
-        record["weeks"] += 1
+        record = users.setdefault(
+            entry.user_id,
+            {"total": Decimal(0), "weeks": set()},
+        )
+        week_results = {
+            player_id: result
+            for (result_week, player_id), result in results.items()
+            if result_week == entry.week
+        }
+        record["total"] += lineup_points(db, entry, week_results)
+        record["weeks"].add(entry.week)
     rows, rank, previous = [], 0, None
     for index, (user, data) in enumerate(
         sorted(users.items(), key=lambda p: (-p[1]["total"], p[0])), 1
@@ -165,12 +234,14 @@ def season_leaderboard(db, season):
                 "username": profile.username,
                 "display_name": profile.display_name,
                 "score": float(data["total"]),
-                "weeks_played": data["weeks"],
-                "average": float(data["total"] / data["weeks"]),
+                "weeks_played": len(data["weeks"]),
+                "average": float(data["total"] / len(data["weeks"])),
             }
         )
         previous = data["total"]
-    return {"season": season, "status": "FINAL", "rows": rows}
+    weeks = db.scalars(select(NFLWeek).where(NFLWeek.season == season)).all()
+    status = "LIVE" if any(week.scoring_status in {"OPEN", "LIVE"} for week in weeks) else "FINAL"
+    return {"season": season, "status": status, "rows": rows}
 
 
 def leaderboard_lineup(db, season, week, user_id):
