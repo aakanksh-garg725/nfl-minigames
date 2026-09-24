@@ -51,6 +51,17 @@ function CurrentLineup() {
               <strong>{points(data.entry.score)}</strong>
             </div>
             <div>
+              <small>TOTAL PROJECTED PPR</small>
+              <strong>
+                {points(
+                  data.slots.reduce(
+                    (total, slot) => total + (slot.player?.projection ?? 0),
+                    0,
+                  ),
+                )}
+              </strong>
+            </div>
+            <div>
               <small>WEEKLY RANK</small>
               <strong>{data.rank ? `#${data.rank}` : "—"}</strong>
             </div>
