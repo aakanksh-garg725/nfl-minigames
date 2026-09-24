@@ -248,11 +248,16 @@ def leaderboard_lineup(db, season, week, user_id):
     current = current_week(db)
     if (season, week) != (current.season, current.week):
         raise RuleError("Only current-week leaderboard lineups can be viewed.", 404)
-    entry = next(
-        (item for item in eligible_entries(db, season, week) if item.user_id == user_id), None
+    entry = db.scalar(
+        select(WeeklyEntry).where(
+            WeeklyEntry.season == season,
+            WeeklyEntry.week == week,
+            WeeklyEntry.game_type == "DEAL",
+            WeeklyEntry.user_id == user_id,
+        )
     )
-    if not entry:
-        raise RuleError("This player has no completed lineup on the current-week leaderboard.", 404)
+    if not entry or not any(slot.player_id for slot in entry_slots(db, entry)):
+        raise RuleError("This player has no rostered pick for the current week.", 404)
     data = lineup(db, entry)
     profile = db.get(Profile, user_id)
     # Explicit allowlist: never share entry/game IDs, acquisition history, or hidden cases.

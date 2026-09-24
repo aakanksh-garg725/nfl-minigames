@@ -46,8 +46,8 @@ function PlayerLineup({ season, week, userId }: Props) {
               title={`@${data.username}'s lineup`}
               aside={<TeamLogo team={data.favorite_team || "NFL"} size={48} />}
             >
-              {data.display_name ? `${data.display_name} · ` : ""}Six locked-in
-              picks from the current-week leaderboard.
+              {data.display_name ? `${data.display_name} · ` : ""}Current-week
+              roster picks from the leaderboard. Empty slots score zero.
             </PageTitle>
             <section
               className="score-summary panel"
