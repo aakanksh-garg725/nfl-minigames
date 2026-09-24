@@ -140,7 +140,6 @@ def weekly_leaderboard(db, season, week):
         )
     ).all()
     week_entries = {entry.user_id: entry for entry in entries}
-    completed_this_week = {entry.user_id for entry in eligible_entries(db, season, week)}
     results = {
         result.player_id: result
         for result in db.scalars(
@@ -180,7 +179,6 @@ def weekly_leaderboard(db, season, week):
                     )
                 ),
                 "user_id": user_id,
-                "has_lineup": user_id in completed_this_week,
                 "weeks_played": 1,
             }
         )

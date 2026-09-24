@@ -169,7 +169,7 @@ export default function LeaderboardPage() {
                               .toUpperCase()}
                           </span>
                           <div>
-                            {canViewLineups && row.has_lineup !== false ? (
+                            {canViewLineups ? (
                               <Link
                                 className="leaderboard-lineup-link"
                                 href={`/leaderboard/${year}/${selectedWeek}/${encodeURIComponent(row.user_id)}`}
@@ -211,7 +211,7 @@ export default function LeaderboardPage() {
             <div className="panel-foot">
               <span>
                 {canViewLineups
-                  ? "Select a player to view their current-week lineup."
+                  ? "Select a player to view their current-week lineup, including any empty slots."
                   : "Equal points share the same rank."}
               </span>
               <span>
