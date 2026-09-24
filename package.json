@@ -1,0 +1,13 @@
+{
+  "name": "sunday-vault",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "lint": "npm run lint --workspace frontend",
+    "typecheck": "npm run typecheck --workspace frontend",
+    "test:e2e": "npm run test:e2e --workspace frontend"
+  },
+  "workspaces": ["frontend"]
+}
