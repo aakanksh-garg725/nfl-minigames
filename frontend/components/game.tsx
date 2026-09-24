@@ -105,25 +105,41 @@ export function GameView({ gameId }: { gameId: string }) {
     refetchInterval: 30_000,
   });
   const g = query.data;
+  const [revealPause, setRevealPause] = useState<{
+    gameId: string;
+    version: number;
+  } | null>(null);
+  const revealing =
+    revealPause?.gameId === gameId && revealPause?.version === g?.version;
   const focusRef = useRef<HTMLHeadingElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const activeOffer = g?.status.startsWith("OFFER_")
     ? g.offers.find((o) => o.decision === "PENDING")
     : undefined;
-  const popupKey = activeOffer
-    ? `offer-${activeOffer.offer_number}`
-    : g?.status === "FINAL_CHOICE"
-      ? "final-choice"
-      : g?.status === "COMPLETE" && g.awarded_player
-        ? "player-locked"
-        : undefined;
+  const popupKey = revealing
+    ? undefined
+    : activeOffer
+      ? `offer-${activeOffer.offer_number}`
+      : g?.status === "FINAL_CHOICE"
+        ? "final-choice"
+        : g?.status === "COMPLETE" && g.awarded_player
+          ? "player-locked"
+          : undefined;
   const action = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: object }) =>
       post<DealGame>(`/deal-games/${gameId}/${path}`, {
         ...body,
         version: g?.version,
       }),
-    onSuccess: (data) => {
+    onSuccess: (data, { path }) => {
+      // Let the final opened case render before covering it with a decision.
+      // Resuming an existing offer or declining one needs no extra pause.
+      if (
+        /^cases\/\d+\/open$/.test(path) &&
+        (data.status.startsWith("OFFER_") || data.status === "FINAL_CHOICE")
+      ) {
+        setRevealPause({ gameId, version: data.version });
+      }
       queryClient.setQueryData(["game", gameId], data);
       queryClient.invalidateQueries({ queryKey: ["week"] });
       queryClient.invalidateQueries({ queryKey: ["lineup"] });
@@ -132,6 +148,11 @@ export function GameView({ gameId }: { gameId: string }) {
       query.refetch();
     },
   });
+  useEffect(() => {
+    if (!revealPause || revealPause.gameId !== gameId) return;
+    const timer = setTimeout(() => setRevealPause(null), 3000);
+    return () => clearTimeout(timer);
+  }, [revealPause, gameId]);
   useEffect(() => {
     if (g?.status.startsWith("ROUND_"))
       focusRef.current?.focus({ preventScroll: true });
@@ -150,6 +171,9 @@ export function GameView({ gameId }: { gameId: string }) {
   const completed = g.status === "COMPLETE";
   const closed = g.cases.filter((c) => c.status === "CLOSED");
   const other = closed.find((c) => !c.is_user_case);
+  const visibleOffers = g.offers.filter(
+    (offer) => !revealing || offer.decision !== "PENDING",
+  );
   return (
     <div className="game-page">
       <div className="game-topline">
@@ -264,7 +288,7 @@ export function GameView({ gameId }: { gameId: string }) {
                 );
               })}
             </div>
-            {activeOffer && (
+            {activeOffer && !revealing && (
               <div className="game-popup-overlay banker-offer-overlay">
                 <div
                   className="dealer-card game-popup-dialog banker-offer-dialog"
@@ -330,7 +354,7 @@ export function GameView({ gameId }: { gameId: string }) {
                 </div>
               </div>
             )}
-            {final && (
+            {final && !revealing && (
               <div className="game-popup-overlay">
                 <div
                   className="dealer-card final-choice game-popup-dialog"
@@ -412,6 +436,15 @@ export function GameView({ gameId }: { gameId: string }) {
             )}
           </div>
           <div className="game-decision-area" aria-live="polite">
+            {revealing && (
+              <div className="case-hint">
+                <Clock3 size={16} />
+                <span>
+                  Take a look at your last reveal. Your next decision is coming
+                  up.
+                </span>
+              </div>
+            )}
             {g.status === "EXPIRED" && (
               <div className="info-notice">
                 No player was awarded.{" "}
@@ -442,7 +475,7 @@ export function GameView({ gameId }: { gameId: string }) {
               </div>
               <Phone size={17} />
             </div>
-            {g.offers.length === 0 ? (
+            {visibleOffers.length === 0 ? (
               <div className="no-offers">
                 <BriefcaseBusiness size={31} />
                 <h3>Good things take nerve.</h3>
@@ -455,7 +488,7 @@ export function GameView({ gameId }: { gameId: string }) {
               </div>
             ) : (
               <div className="offer-history">
-                {g.offers.map((offer) => (
+                {visibleOffers.map((offer) => (
                   <div
                     className={`offer-history-item ${offer.decision === "PENDING" ? "pending" : ""}`}
                     key={offer.offer_number}

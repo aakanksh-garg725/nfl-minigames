@@ -1,4 +1,131 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
+import type { DealGame } from "../lib/types";
+
+for (const decision of [
+  "OFFER_1",
+  "OFFER_2",
+  "OFFER_3",
+  "OFFER_4",
+  "FINAL_CHOICE",
+]) {
+  test(`last case stays visible for three seconds before ${decision}`, async ({
+    page,
+  }) => {
+    const round = decision === "FINAL_CHOICE" ? 4 : Number(decision.slice(-1));
+    const board = Array.from({ length: 12 }, (_, i) => ({
+      id: `reveal-${i}`,
+      name: `Reveal Player ${i + 1}`,
+      team: "BAL",
+      position: "RB" as const,
+      projection: 20 - i,
+      board_rank: i + 1,
+      eliminated: false,
+    }));
+    let game: DealGame = {
+      id: "reveal-preview",
+      slot: "RB1",
+      status: `ROUND_${round}`,
+      version: 1,
+      expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+      current_round: round,
+      round_open_count: 0,
+      selected_case_number: 7,
+      board,
+      cases: board.map((_, i) => ({
+        case_number: i + 1,
+        status: "CLOSED",
+        is_user_case: i === 6,
+      })),
+      offers: Array.from({ length: round - 1 }, (_, i) => ({
+        offer_number: i + 1,
+        decision: "NO_DEAL",
+        player: board[i + 1],
+      })),
+      instruction: "Open one more case",
+      outcome: null,
+      awarded_player: null,
+    };
+    await page.route("**/api/v1/deal-games/reveal-preview", (route) =>
+      route.fulfill({ json: game }),
+    );
+    await page.route(
+      "**/api/v1/deal-games/reveal-preview/cases/1/open",
+      (route) => {
+        game = {
+          ...game,
+          status: decision,
+          version: 2,
+          cases: game.cases.map((c) =>
+            c.case_number === 1
+              ? { ...c, status: "OPENED", player: board[0] }
+              : c,
+          ),
+          offers:
+            decision === "FINAL_CHOICE"
+              ? game.offers
+              : [
+                  ...game.offers,
+                  {
+                    offer_number: round,
+                    decision: "PENDING",
+                    player: board[11],
+                  },
+                ],
+        };
+        return route.fulfill({ json: game });
+      },
+    );
+    await page.goto("/play/reveal-preview");
+    const openCase = page.getByRole("button", {
+      name: "Open case 1",
+      exact: true,
+    });
+    await expect(openCase).toBeEnabled();
+    await page.clock.install();
+    await page.clock.pauseAt(new Date(Date.now() + 1000));
+    const response = page.waitForResponse(
+      "**/deal-games/reveal-preview/cases/1/open",
+    );
+    await openCase.click();
+    await response;
+    // Flush query notifications while keeping the reveal timer controlled.
+    await page.clock.runFor(50);
+    await expect(
+      page.getByRole("button", { name: /Case 1: Reveal Player 1,/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Take a look at your last reveal/),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".case-grid button:not(:disabled)")).toHaveCount(
+      0,
+    );
+    await expect(page.locator(".offer-history-item")).toHaveCount(round - 1);
+    await page.clock.runFor(2900);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.clock.runFor(100);
+    const popup = page.getByRole("dialog", {
+      name:
+        decision === "FINAL_CHOICE"
+          ? "Stay loyal or switch sides?"
+          : `Banker offer ${round}`,
+    });
+    await expectCasePopup(page, popup);
+    await expect(page.getByText(/Take a look at your last reveal/)).toHaveCount(
+      0,
+    );
+    await expect(page.locator(".offer-history-item")).toHaveCount(
+      decision === "FINAL_CHOICE" ? round - 1 : round,
+    );
+    // An already-pending decision should show immediately on resume.
+    await page.clock.resume();
+    await page.reload();
+    await expectCasePopup(page, popup);
+    await expect(page.getByText(/Take a look at your last reveal/)).toHaveCount(
+      0,
+    );
+  });
+}
 
 async function expectCasePopup(page: Page, popup: Locator) {
   await expect(popup).toBeVisible();
