@@ -53,6 +53,10 @@ Profile includes username, optional display name, favorite team, email change, a
 
 **Supabase configuration still requires dashboard confirmation:** in Auth → Email settings, keep email confirmation enabled, set minimum password length to 8, and require lowercase + uppercase + digits + symbols. Frontend validation is implemented, but cannot replace [Supabase's server-side password policy](https://supabase.com/docs/guides/auth/password-security). Keep Secure Email Change enabled so confirmation is required at both addresses. These management settings were not changed through the available tools. Test real email delivery/confirmation with your inbox before deployment.
 
+## Leaderboard lineups
+
+Signed-in users can select a player on the **current-week leaderboard** to view their completed six-player lineup, actual total, individual full-PPR scores, game statuses, and home/away opponents. This view refreshes every 30 seconds and is read-only. Historical/season standings do not link to shared lineups; the API rejects non-current weeks, incomplete or late entries, and unauthenticated viewers. Private game IDs, cases, and account details are not shared.
+
 ## Season-long head-to-head
 
 - Click **View matchup** or a week in rivalry history to compare both lineups. Your team stays on the left and your opponent on the right, with actual totals at the top, aligned roster slots, projections, game status, and home/away opponents. A week selector opens earlier or upcoming matchups. Empty slots score zero; scores refresh every 30 seconds. Only the two participants can access an accepted rivalry's matchup, and hidden case/game details are never returned.
@@ -128,7 +132,7 @@ Use [the CSV header template](docs/manual-import-template.csv). Player IDs shoul
 
 The current rule update below supersedes the original specification's tier split, EV-only Dealer coefficients, and no-random-noise rule, as well as the earlier 14-tier/top-12 variant.
 
-The backend has 142 passing tests, covering game integrity, daily refresh locking, required username onboarding, profile validation, and season-long rivalries. Game coverage includes the exact 3.0 threshold, 10-tier selection with unique extra picks from tiers 2 and 4, population-SD risk premiums, bounded repeatable offer randomness, all four Dealer rounds, home/away matchup display data, and legacy-game expiration without changing completed picks.
+The backend has 149 passing tests, covering game integrity, daily refresh locking, required username onboarding, profile validation, read-only current-week leaderboard lineups, and season-long rivalries. Game coverage includes the exact 3.0 threshold, 10-tier selection with unique extra picks from tiers 2 and 4, population-SD risk premiums, bounded repeatable offer randomness, all four Dealer rounds, home/away matchup display data, and legacy-game expiration without changing completed picks.
 
 - Slots fill in RB1, RB2, WR1, WR2, TE, FLEX order. No player or completed slot can be reused.
 - Both cases and Dealer offers require a raw full-PPR projection of at least 3.0. Values below 3.0 are excluded even if they round to 3.0 on screen.

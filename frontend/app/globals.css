@@ -2276,6 +2276,21 @@ form input::placeholder {
   padding-top: 24px;
   border-top: 1px solid var(--line);
 }
+.leaderboard-lineup-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.leaderboard-lineup-link > span {
+  color: var(--gold);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.leaderboard-lineup-link:hover strong {
+  color: var(--gold);
+  text-decoration: underline;
+}
 .matchup-week-link {
   color: var(--gold);
   text-decoration: underline;

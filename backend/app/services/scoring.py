@@ -13,7 +13,7 @@ from app.models import (
     Projection,
     WeeklyEntry,
 )
-from app.services.game import entry_slots, player_matchup, public_player
+from app.services.game import current_week, entry_slots, player_matchup, public_player
 from app.services.rules import RuleError
 
 
@@ -161,6 +161,33 @@ def season_leaderboard(db, season):
         )
         previous = data["total"]
     return {"season": season, "status": "FINAL", "rows": rows}
+
+
+def leaderboard_lineup(db, season, week, user_id):
+    current = current_week(db)
+    if (season, week) != (current.season, current.week):
+        raise RuleError("Only current-week leaderboard lineups can be viewed.", 404)
+    entry = next(
+        (item for item in eligible_entries(db, season, week) if item.user_id == user_id), None
+    )
+    if not entry:
+        raise RuleError("This player has no completed lineup on the current-week leaderboard.", 404)
+    data = lineup(db, entry)
+    profile = db.get(Profile, user_id)
+    # Explicit allowlist: never share entry/game IDs, acquisition history, or hidden cases.
+    return {
+        "season": season,
+        "week": week,
+        "username": profile.username,
+        "display_name": profile.display_name,
+        "favorite_team": profile.favorite_team,
+        "score": data["entry"]["score"],
+        "status": current.scoring_status,
+        "slots": [
+            {key: slot[key] for key in ("slot", "player", "actual_ppr", "game_status")}
+            for slot in data["slots"]
+        ],
+    }
 
 
 def lineup(db, entry):

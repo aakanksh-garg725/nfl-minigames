@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
@@ -15,6 +16,10 @@ export default function LeaderboardPage() {
   const [week, setWeek] = useState<number | null>(null);
   const year = season ?? current.data?.season;
   const selectedWeek = week ?? current.data?.week;
+  const canViewLineups =
+    tab === "weekly" &&
+    year === current.data?.season &&
+    selectedWeek === current.data?.week;
   const query = useQuery({
     queryKey: ["leaderboard", tab, year, selectedWeek],
     queryFn: () =>
@@ -161,7 +166,22 @@ export default function LeaderboardPage() {
                               .toUpperCase()}
                           </span>
                           <div>
-                            <strong>{row.display_name || row.username}</strong>
+                            {canViewLineups ? (
+                              <Link
+                                className="leaderboard-lineup-link"
+                                href={`/leaderboard/${year}/${selectedWeek}/${encodeURIComponent(row.user_id)}`}
+                                aria-label={`View @${row.username}'s Week ${selectedWeek} lineup`}
+                              >
+                                <strong>
+                                  {row.display_name || row.username}
+                                </strong>
+                                <span>View lineup ↗</span>
+                              </Link>
+                            ) : (
+                              <strong>
+                                {row.display_name || row.username}
+                              </strong>
+                            )}
                             <small>@{row.username}</small>
                           </div>
                         </div>
@@ -181,7 +201,11 @@ export default function LeaderboardPage() {
               </table>
             </div>
             <div className="panel-foot">
-              <span>Equal points share the same rank.</span>
+              <span>
+                {canViewLineups
+                  ? "Select a player to view their current-week lineup."
+                  : "Equal points share the same rank."}
+              </span>
               <span>Full PPR · Actual results only</span>
             </div>
           </div>

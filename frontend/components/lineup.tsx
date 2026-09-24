@@ -37,10 +37,13 @@ export function LineupCards({
   slots,
   current,
   scored = false,
+  readOnly = false,
 }: {
-  slots: LineupSlot[];
+  slots: (Pick<LineupSlot, "slot" | "player" | "actual_ppr" | "game_status"> &
+    Partial<LineupSlot>)[];
   current?: string | null;
   scored?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className="lineup-cards">
@@ -90,24 +93,26 @@ export function LineupCards({
                     {slot.game_status.replaceAll("_", " ")}
                   </span>
                 </div>
-                <div className="roster-acquisition">
-                  <span>
-                    {
-                      (
-                        {
-                          DEAL: "Dealer offer",
-                          FINAL_KEEP: "Kept your case",
-                          FINAL_SWAP: "Swapped cases",
-                        } as Record<string, string>
-                      )[slot.acquisition_method || ""]
-                    }
-                  </span>
-                  {slot.deal_game_id && (
-                    <Link href={`/play/${slot.deal_game_id}`}>
-                      View game <ArrowRight size={13} />
-                    </Link>
-                  )}
-                </div>
+                {!readOnly && (
+                  <div className="roster-acquisition">
+                    <span>
+                      {
+                        (
+                          {
+                            DEAL: "Dealer offer",
+                            FINAL_KEEP: "Kept your case",
+                            FINAL_SWAP: "Swapped cases",
+                          } as Record<string, string>
+                        )[slot.acquisition_method || ""]
+                      }
+                    </span>
+                    {slot.deal_game_id && (
+                      <Link href={`/play/${slot.deal_game_id}`}>
+                        View game <ArrowRight size={13} />
+                      </Link>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <div className="roster-empty">

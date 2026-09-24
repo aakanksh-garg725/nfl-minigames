@@ -437,6 +437,17 @@ def season_board(season: int, db: Session = Depends(get_db)):
     return scoring.season_leaderboard(db, season)
 
 
+@app.get("/api/v1/leaderboards/weekly/{season}/{week}/lineups/{user_id}")
+def leaderboard_player_lineup(
+    season: int,
+    week: int,
+    user_id: str,
+    viewer=Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    return scoring.leaderboard_lineup(db, season, week, user_id)
+
+
 @app.get("/api/v1/admin/health")
 def admin_health(user=Depends(admin_user), db: Session = Depends(get_db)):
     runs = db.scalars(select(ProviderRun).order_by(ProviderRun.created_at.desc()).limit(30)).all()
