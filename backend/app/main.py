@@ -32,7 +32,12 @@ from app.providers.csv_provider import CSVProvider
 from app.providers.espn import ESPNProvider
 from app.services import game, rivalries, scoring
 from app.services.ingestion import run_sync
-from app.services.profiles import NFL_TEAMS, username_available, username_suggestions
+from app.services.profiles import (
+    NFL_TEAMS,
+    profile_complete,
+    username_available,
+    username_suggestions,
+)
 from app.services.rules import RuleError, Slot
 
 settings = get_settings()
@@ -325,7 +330,7 @@ def get_profile(user=Depends(current_user), db: Session = Depends(get_db)):
         "username": profile.username if profile else "",
         "display_name": profile.display_name if profile else "",
         "favorite_team": profile.favorite_team if profile else None,
-        "profile_complete": bool(profile and profile.favorite_team),
+        "profile_complete": profile_complete(profile),
         "teams": [{"code": code, "name": name} for code, name in NFL_TEAMS.items()],
         "is_admin": user in settings.admin_user_ids.split(","),
     }

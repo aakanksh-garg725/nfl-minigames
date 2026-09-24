@@ -71,10 +71,10 @@ def test_matchup_lineups_are_viewer_relative_private_and_week_scoped(db, rivals)
         assert "deal_game_id" not in data["opponent"]["slots"][0]
         assert "email" not in data["opponent"]
         assert data["weeks"] == list(range(3, 19))
-        empty = client.get(url.replace("/4", "/3")).json()
+        empty = client.get(f"/api/v1/rivalries/{rivalry.id}/matchups/3").json()
         assert empty["you"]["slots"] == []
         assert empty["you"]["score"] == 0
-        assert client.get(url.replace("/4", "/2")).status_code == 404
+        assert client.get(f"/api/v1/rivalries/{rivalry.id}/matchups/2").status_code == 404
         app.dependency_overrides[current_user] = lambda: "opponent"
         inverse = client.get(url).json()
         assert inverse["you"] == data["opponent"]

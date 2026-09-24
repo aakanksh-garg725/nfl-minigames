@@ -19,6 +19,7 @@ from app.models import (
     ProjectionSnapshot,
     WeeklyEntry,
 )
+from app.services.profiles import profile_complete
 from app.services.rules import (
     ALGORITHM_VERSION,
     DEALER_ALGORITHM_VERSION,
@@ -86,7 +87,7 @@ def start_entry(db: Session, user: str, now: datetime | None = None):
     begin_write(db)
     # Serializes initial entry creation across processes and duplicate requests.
     profile = db.scalar(select(Profile).where(Profile.user_id == user).with_for_update())
-    if not profile or not profile.favorite_team:
+    if not profile_complete(profile):
         raise RuleError(
             "Choose a username and favorite NFL team in your profile before playing.", 428
         )
@@ -333,6 +334,10 @@ def act(db: Session, user: str, game_id: str, action: str, value, version: int, 
     now = now or utcnow()
     begin_write(db)
     game = owned_game(db, user, game_id, lock=True)
+    if not profile_complete(db.get(Profile, user)):
+        raise RuleError(
+            "Choose a username and favorite NFL team in your profile before playing.", 428
+        )
     if expire_if_needed(db, game, user, now):
         db.commit()  # Persist expiry even though the requested action is rejected.
         raise RuleError(

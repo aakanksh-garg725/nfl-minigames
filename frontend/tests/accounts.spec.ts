@@ -18,6 +18,79 @@ test("password policy covers every requirement and confirmation", () => {
   expect(() => validatePassword(valid, "Different9!")).toThrow(/do not match/);
 });
 
+test("play and direct game links require a saved username", async ({
+  page,
+}) => {
+  let complete = false;
+  let gameRequests = 0;
+  await page.route("**/api/v1/profile", async (route) => {
+    if (route.request().method() === "PATCH") {
+      expect(route.request().postDataJSON().username).toBe("ready_player");
+      complete = true;
+    }
+    await route.fulfill({
+      json: {
+        user_id: "onboarding",
+        username: complete ? "ready_player" : "",
+        display_name: "",
+        favorite_team: "BAL",
+        profile_complete: complete,
+        is_admin: false,
+        teams: [{ code: "BAL", name: "Baltimore Ravens" }],
+      },
+    });
+  });
+  await page.route("**/api/v1/deal-games**", async (route) => {
+    gameRequests++;
+    await route.fulfill({
+      status: 500,
+      json: { detail: "Unexpected game request" },
+    });
+  });
+  for (const path of ["/play", "/play/saved-game"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/profile$/);
+    await expect(
+      page.getByRole("heading", { name: "Finish your profile" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Before you can play, save your player profile.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    expect(gameRequests).toBe(0);
+  }
+  await page.getByLabel("Username", { exact: true }).fill("ready_player");
+  await page.getByRole("button", { name: "Save profile" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your profile", exact: true }),
+  ).toBeVisible();
+  await page.locator('.success-notice a[href="/play"]').click();
+  await expect(
+    page.getByRole("heading", { name: "Build your Sunday." }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
+  expect(gameRequests).toBe(0);
+});
+
+test("profile loading errors do not expose gameplay", async ({ page }) => {
+  await page.route("**/api/v1/profile", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "Profile temporarily unavailable" },
+    }),
+  );
+  await page.goto("/play");
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Profile temporarily unavailable" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Build your Sunday." }),
+  ).toHaveCount(0);
+});
+
 test("sidebar adapts to short screens and has no promo card", async ({
   page,
 }) => {

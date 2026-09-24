@@ -5,7 +5,9 @@ from sqlalchemy import select
 from app.core.auth import current_user
 from app.core.db import get_db
 from app.main import app, limited_user
-from app.models import Profile
+from app.models import Profile, WeeklyEntry
+from app.services import game
+from app.services.rules import SLOTS
 
 
 @pytest.fixture
@@ -68,3 +70,43 @@ def test_incomplete_profile_cannot_start_game(client, db, user):
     db.commit()
     assert not client.get("/api/v1/profile").json()["profile_complete"]
     assert client.post("/api/v1/deal-games", json={"slot": "RB1"}).status_code == 428
+
+
+@pytest.mark.parametrize("username", ["", "   ", "ab", "has space"])
+def test_username_required_even_with_favorite_team(client, db, user, username):
+    profile = db.get(Profile, user)
+    profile.username = username
+    profile.favorite_team = "BAL"
+    db.commit()
+    assert not client.get("/api/v1/profile").json()["profile_complete"]
+    for path, body in [("/api/v1/entry/start", {}), ("/api/v1/deal-games", {"slot": "RB1"})]:
+        response = client.post(path, json=body)
+        assert response.status_code == 428
+        assert "username" in response.json()["detail"]
+    assert db.scalar(select(WeeklyEntry).where(WeeklyEntry.user_id == user)) is None
+    response = client.patch(
+        "/api/v1/profile", json={"username": "ready_player", "favorite_team": "BAL"}
+    )
+    assert response.json()["profile_complete"]
+    assert client.post("/api/v1/deal-games", json={"slot": "RB1"}).status_code == 200
+
+
+def test_missing_profile_cannot_start_entry(client, db, user):
+    db.delete(db.get(Profile, user))
+    db.commit()
+    assert not client.get("/api/v1/profile").json()["profile_complete"]
+    assert client.post("/api/v1/entry/start").status_code == 428
+
+
+def test_existing_game_cannot_be_played_without_username(client, db, user):
+    existing = game.start_game(db, user, SLOTS[0])
+    db.commit()
+    db.get(Profile, user).username = ""
+    db.commit()
+    response = client.post(
+        f"/api/v1/deal-games/{existing.id}/select-case",
+        json={"case_number": 1, "version": existing.version},
+    )
+    assert response.status_code == 428
+    db.refresh(existing)
+    assert existing.selected_case_number is None

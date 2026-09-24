@@ -47,7 +47,7 @@ Only one mode can run on ports 3000/8000 at a time. Stop the running launcher wi
 
 ## Accounts and profiles
 
-Signup asks for email, password, and password confirmation. Signup, reset-password, and profile password changes share the policy: at least 8 characters, an uppercase letter, a lowercase letter, a number, and an ASCII special character. Sign-in still accepts existing passwords. After verification, profile setup requires a unique case-insensitive username (3–24 letters/numbers/underscores) and a favorite NFL team. Taken usernames return checked suggestions; availability is only reserved upon saving. Username changes preserve the immutable account ID and all lineup/rivalry history.
+Signup asks for email, password, and password confirmation. Signup, reset-password, and profile password changes share the policy: at least 8 characters, an uppercase letter, a lowercase letter, a number, and an ASCII special character. Sign-in still accepts existing passwords. After verification, profile setup requires a unique case-insensitive username (3–24 letters/numbers/underscores) and a favorite NFL team. All Play routes, including saved game links, redirect incomplete profiles to setup before showing gameplay. The API also checks a valid saved username and team before creating entries or starting/continuing games. Taken usernames return checked suggestions; availability is only reserved upon saving. Username changes preserve the immutable account ID and all lineup/rivalry history.
 
 Profile includes username, optional display name, favorite team, email change, and password change. Sensitive account changes reauthenticate with the current password. Email changes require the provider's confirmation flow; email/passwords are not stored in public profile tables. The backend also checks the trusted Supabase email-confirmation timestamp before allowing profile writes.
 
@@ -128,7 +128,7 @@ Use [the CSV header template](docs/manual-import-template.csv). Player IDs shoul
 
 The current rule update below supersedes the original specification's tier split, EV-only Dealer coefficients, and no-random-noise rule, as well as the earlier 14-tier/top-12 variant.
 
-The backend has 136 passing tests, covering game integrity, daily refresh locking, profile validation, and season-long rivalries. Game coverage includes the exact 3.0 threshold, 10-tier selection with unique extra picks from tiers 2 and 4, population-SD risk premiums, bounded repeatable offer randomness, all four Dealer rounds, home/away matchup display data, and legacy-game expiration without changing completed picks.
+The backend has 142 passing tests, covering game integrity, daily refresh locking, required username onboarding, profile validation, and season-long rivalries. Game coverage includes the exact 3.0 threshold, 10-tier selection with unique extra picks from tiers 2 and 4, population-SD risk premiums, bounded repeatable offer randomness, all four Dealer rounds, home/away matchup display data, and legacy-game expiration without changing completed picks.
 
 - Slots fill in RB1, RB2, WR1, WR2, TE, FLEX order. No player or completed slot can be reused.
 - Both cases and Dealer offers require a raw full-PPR projection of at least 3.0. Values below 3.0 are excluded even if they round to 3.0 on screen.

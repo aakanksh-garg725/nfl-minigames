@@ -184,6 +184,8 @@ function ProfileEditor({ profile }: { profile: Profile }) {
         {profile.profile_complete ? "Your profile" : "Finish your profile"}
       </h2>
       <p className="profile-description">
+        {!profile.profile_complete &&
+          "Before you can play, save your player profile. "}
         Choose a unique username and your favorite NFL team. You can change them
         anytime without losing your lineup or history.
       </p>

@@ -42,6 +42,14 @@ NFL_TEAMS = {
 }
 
 
+def profile_complete(profile):
+    return bool(
+        profile
+        and re.fullmatch(r"[a-zA-Z0-9_]{3,24}", profile.username or "")
+        and profile.favorite_team in NFL_TEAMS
+    )
+
+
 def username_available(db, username, user):
     return (
         db.scalar(
